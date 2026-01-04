@@ -44,10 +44,10 @@ export function Header() {
               <Link
                 key={item.name}
                 to={item.href}
-                className="group relative px-4 py-2 text-base font-medium text-white/90 drop-shadow-md transition-all hover:text-sky-300"
+                className="group relative px-4 py-2 text-base font-medium text-white/90 drop-shadow-md transition-colors duration-200 hover:text-sky-300"
               >
                 {item.name}
-                <span className="absolute bottom-0 left-1/2 h-0.5 w-0 bg-sky-400 transition-all duration-300 ease-out group-hover:left-4 group-hover:w-[calc(100%-2rem)]" />
+                <span className="absolute bottom-0 left-4 right-4 h-0.5 origin-left scale-x-0 bg-sky-400 transition-transform duration-300 ease-out group-hover:scale-x-100" />
               </Link>
             ))}
           </nav>
@@ -91,9 +91,10 @@ export function Header() {
                 key={item.name}
                 to={item.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className="block rounded-lg px-4 py-3 text-lg font-medium text-white/90 transition-colors hover:bg-sky-500/20 hover:text-sky-300"
+                className="group relative block rounded-lg px-4 py-3 text-lg font-medium text-white/90 transition-colors duration-200 hover:bg-sky-500/20 hover:text-sky-300"
               >
                 {item.name}
+                <span className="absolute bottom-2 left-4 right-4 h-0.5 origin-left scale-x-0 bg-sky-400 transition-transform duration-300 ease-out group-hover:scale-x-100" />
               </Link>
             ))}
             <div className="space-y-2 pt-4">
