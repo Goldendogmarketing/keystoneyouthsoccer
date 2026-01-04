@@ -269,19 +269,32 @@ function AboutPage() {
                   provide the perfect environment for young athletes to learn and compete.
                 </p>
                 <div className="mt-6 space-y-3">
-                  <div className="flex items-start gap-3">
+                  <a
+                    href="https://maps.apple.com/?daddr=6065+Twin+Lakes+Rd,+Keystone+Heights,+FL+32656"
+                    onClick={(e) => {
+                      if (!/iPhone|iPad|iPod|Mac/i.test(navigator.userAgent)) {
+                        e.preventDefault();
+                        window.open('https://www.google.com/maps/dir/?api=1&destination=6065+Twin+Lakes+Rd,+Keystone+Heights,+FL+32656', '_blank');
+                      }
+                    }}
+                    className="flex items-start gap-3 hover:opacity-80 transition-opacity cursor-pointer"
+                  >
                     <MapPin className="mt-1 h-5 w-5 text-primary" />
                     <div>
                       <div className="font-medium">6065 Twin Lakes Road</div>
                       <div className="text-muted-foreground">Keystone Heights, FL 32656</div>
                     </div>
-                  </div>
+                  </a>
                 </div>
                 <Button asChild className="mt-8 gap-2" size="lg">
                   <a
-                    href="https://maps.google.com/?q=6065+Twin+Lakes+Rd+Keystone+Heights+FL+32656"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href="https://maps.apple.com/?daddr=6065+Twin+Lakes+Rd,+Keystone+Heights,+FL+32656"
+                    onClick={(e) => {
+                      if (!/iPhone|iPad|iPod|Mac/i.test(navigator.userAgent)) {
+                        e.preventDefault();
+                        window.open('https://www.google.com/maps/dir/?api=1&destination=6065+Twin+Lakes+Rd,+Keystone+Heights,+FL+32656', '_blank');
+                      }
+                    }}
                   >
                     Get Directions
                     <ArrowRight className="h-4 w-4" />
@@ -289,14 +302,13 @@ function AboutPage() {
                 </Button>
               </div>
 
-              {/* Map Placeholder */}
-              <div className="flex items-center justify-center rounded-2xl bg-primary/10 p-8">
-                <div className="text-center">
-                  <MapPin className="mx-auto h-16 w-16 text-primary/40" />
-                  <p className="mt-4 text-sm text-muted-foreground">
-                    Interactive map coming soon
-                  </p>
-                </div>
+              {/* Aerial View of Twin Lakes Park */}
+              <div className="overflow-hidden rounded-2xl">
+                <img
+                  src="/hero-aerial.jpg"
+                  alt="Aerial view of Twin Lakes Park soccer fields"
+                  className="h-full w-full object-cover"
+                />
               </div>
             </div>
           </div>

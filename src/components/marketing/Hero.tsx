@@ -58,7 +58,7 @@ export function Hero() {
                 variant="ghost"
                 className="border-2 border-white/30 bg-transparent text-lg font-semibold text-white hover:bg-white/10"
               >
-                <Link to="/about">View Programs</Link>
+                <a href="#programs">View Programs</a>
               </Button>
             </div>
 

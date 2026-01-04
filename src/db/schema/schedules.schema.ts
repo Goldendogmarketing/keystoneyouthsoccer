@@ -35,3 +35,16 @@ export const practices = pgTable('practices', {
   isCancelled: boolean('is_cancelled').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+export const schedules = pgTable('schedules', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  teamId: uuid('team_id')
+    .references(() => teams.id, { onDelete: 'cascade' })
+    .notNull(),
+  gameDate: text('game_date').notNull(),
+  location: text('location').notNull(),
+  opponent: text('opponent'),
+  type: text('type', { enum: ['game', 'practice', 'event'] }).default('game'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});

@@ -13,7 +13,7 @@ const ageGroups = [
 
 export function AgeGroupsSection() {
   return (
-    <section className="bg-muted/30 py-20 md:py-28">
+    <section id="programs" className="bg-muted/30 py-20 md:py-28">
       <div className="container mx-auto px-6">
         <div className="mb-16 text-center">
           <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl">

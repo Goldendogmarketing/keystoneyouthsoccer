@@ -157,18 +157,37 @@ function Home() {
                 <h3 className="text-xl font-semibold">Location</h3>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="space-y-1">
+                <a
+                  href="https://maps.apple.com/?daddr=6065+Twin+Lakes+Rd,+Keystone+Heights,+FL+32656"
+                  onClick={(e) => {
+                    // On non-Apple devices, use Google Maps
+                    if (!/iPhone|iPad|iPod|Mac/i.test(navigator.userAgent)) {
+                      e.preventDefault();
+                      window.open('https://www.google.com/maps/dir/?api=1&destination=6065+Twin+Lakes+Rd,+Keystone+Heights,+FL+32656', '_blank');
+                    }
+                  }}
+                  className="block space-y-1 hover:opacity-80 transition-opacity cursor-pointer"
+                >
                   <div className="font-medium text-foreground">Twin Lakes Park</div>
                   <div className="text-sm text-muted-foreground">
                     6065 Twin Lakes Rd
                     <br />
                     Keystone Heights, FL 32656
                   </div>
-                </div>
-                <div className="mt-4 inline-flex items-center text-sm font-medium text-success hover-gold">
+                </a>
+                <a
+                  href="https://maps.apple.com/?daddr=6065+Twin+Lakes+Rd,+Keystone+Heights,+FL+32656"
+                  onClick={(e) => {
+                    if (!/iPhone|iPad|iPod|Mac/i.test(navigator.userAgent)) {
+                      e.preventDefault();
+                      window.open('https://www.google.com/maps/dir/?api=1&destination=6065+Twin+Lakes+Rd,+Keystone+Heights,+FL+32656', '_blank');
+                    }
+                  }}
+                  className="mt-4 inline-flex items-center text-sm font-medium text-success hover-gold"
+                >
                   Get directions
                   <ArrowRight className="ml-1 h-4 w-4" />
-                </div>
+                </a>
               </CardContent>
             </Card>
 
@@ -183,7 +202,7 @@ function Home() {
               <CardContent className="space-y-3">
                 <div className="space-y-1">
                   <div className="font-medium text-foreground">Phone</div>
-                  <div className="text-sm text-muted-foreground">352.473.7777</div>
+                  <a href="tel:+13522467776" className="text-sm text-muted-foreground hover:text-primary transition-colors">352-246-7776</a>
                 </div>
                 <div className="space-y-1">
                   <div className="font-medium text-foreground">Email</div>
