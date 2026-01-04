@@ -1,0 +1,13 @@
+// Export database client
+export { db } from './db';
+
+// Export all schemas
+export * from './schema/users.schema';
+export * from './schema/players.schema';
+export * from './schema/seasons.schema';
+export * from './schema/registrations.schema';
+export * from './schema/teams.schema';
+export * from './schema/schedules.schema';
+export * from './schema/tournaments.schema';
+export * from './schema/sponsors.schema';
+export * from './schema/content.schema';

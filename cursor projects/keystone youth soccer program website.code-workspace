@@ -1,0 +1,10 @@
+{
+	"folders": [
+		{
+			"path": "../constructa-starter-min-main"
+		}
+	],
+	"settings": {
+		"typescript.tsdk": "./node_modules/typescript/lib"
+	}
+}

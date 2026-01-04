@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm add:*)",
+      "Bash(npm install:*)",
+      "Bash(npx shadcn@latest add input form label alert)",
+      "Bash(npm run dev:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(powershell -Command \"\\(Invoke-WebRequest -Uri http://localhost:3001 -UseBasicParsing -TimeoutSec 10\\).StatusCode\")",
+      "Bash(where:*)",
+      "Bash(docker:*)",
+      "Bash(start http://localhost:3002)",
+      "Bash(dir:*)"
+    ]
+  }
+}
