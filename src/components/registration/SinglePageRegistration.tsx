@@ -1,0 +1,851 @@
+import { useState, useCallback } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Button } from '~/components/ui/button';
+import { Input } from '~/components/ui/input';
+import { Label } from '~/components/ui/label';
+import { Textarea } from '~/components/ui/textarea';
+import { Checkbox } from '~/components/ui/checkbox';
+import { Card, CardContent, CardHeader } from '~/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '~/components/ui/select';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '~/components/ui/form';
+import { SignatureCapture } from './SignatureCapture';
+import { SpamProtection } from './SpamProtection';
+import {
+  User,
+  Users,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  Shirt,
+  Heart,
+  MessageSquare,
+  Plus,
+  Minus,
+  CreditCard,
+  Shield,
+} from 'lucide-react';
+
+// Validation schema
+const registrationSchema = z.object({
+  // Required fields
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  gender: z.enum(['male', 'female', 'other'], { required_error: 'Please select gender' }),
+  dateOfBirth: z.string().min(1, 'Date of birth is required'),
+  email: z.string().email('Please enter a valid email address'),
+  parentGuardianName: z.string().min(1, 'Parent/Guardian name is required'),
+  streetAddress: z.string().min(1, 'Street address is required'),
+  city: z.string().min(1, 'City is required'),
+  state: z.string().min(1, 'State is required'),
+  zipCode: z.string().min(5, 'Valid zip code is required'),
+  phone: z.string().min(10, 'Valid phone number is required'),
+
+  // Optional fields
+  requestedTeam: z.string().optional(),
+  uniformSize: z.string().optional(),
+  volunteerRole: z.string().optional(),
+  comments: z.string().optional(),
+
+  // Additional players
+  additionalPlayers: z
+    .array(
+      z.object({
+        firstName: z.string().min(1, 'First name is required'),
+        lastName: z.string().min(1, 'Last name is required'),
+        gender: z.enum(['male', 'female', 'other']),
+        dateOfBirth: z.string().min(1, 'Date of birth is required'),
+        uniformSize: z.string().optional(),
+      })
+    )
+    .optional(),
+
+  // Agreements
+  agreeToTerms: z.boolean().refine((val) => val === true, {
+    message: 'You must agree to the terms and conditions',
+  }),
+
+  // Signature
+  signature: z.string().min(1, 'Signature is required'),
+});
+
+type RegistrationFormData = z.infer<typeof registrationSchema>;
+
+interface SinglePageRegistrationProps {
+  seasonId: string;
+  seasonName: string;
+  baseRegistrationFee: number;
+  onSuccess?: (data: RegistrationFormData) => void;
+}
+
+const UNIFORM_SIZES = [
+  { value: 'youth-s', label: 'Youth Small' },
+  { value: 'youth-m', label: 'Youth Medium' },
+  { value: 'youth-l', label: 'Youth Large' },
+  { value: 'adult-s', label: 'Adult Small' },
+  { value: 'adult-m', label: 'Adult Medium' },
+  { value: 'adult-l', label: 'Adult Large' },
+  { value: 'adult-xl', label: 'Adult XL' },
+];
+
+const VOLUNTEER_ROLES = [
+  { value: 'coach', label: 'Coach' },
+  { value: 'assistant-coach', label: 'Assistant Coach' },
+  { value: 'referee', label: 'Referee' },
+  { value: 'team-sponsor-150', label: 'Team Sponsor ($150)' },
+  { value: 'sign-sponsor-300', label: 'Sign Sponsor ($300)' },
+];
+
+export function SinglePageRegistration({
+  seasonId,
+  seasonName,
+  baseRegistrationFee,
+  onSuccess,
+}: SinglePageRegistrationProps) {
+  const [isSpamVerified, setIsSpamVerified] = useState(false);
+  const [additionalPlayerCount, setAdditionalPlayerCount] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const form = useForm<RegistrationFormData>({
+    resolver: zodResolver(registrationSchema),
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      gender: undefined,
+      dateOfBirth: '',
+      email: '',
+      parentGuardianName: '',
+      streetAddress: '',
+      city: '',
+      state: 'FL',
+      zipCode: '',
+      phone: '',
+      requestedTeam: '',
+      uniformSize: '',
+      volunteerRole: '',
+      comments: '',
+      additionalPlayers: [],
+      agreeToTerms: false,
+      signature: '',
+    },
+  });
+
+  // Calculate total price
+  const totalPrice = baseRegistrationFee * (1 + additionalPlayerCount);
+
+  const handleAddPlayer = () => {
+    if (additionalPlayerCount < 5) {
+      setAdditionalPlayerCount((prev) => prev + 1);
+      const currentPlayers = form.getValues('additionalPlayers') || [];
+      form.setValue('additionalPlayers', [
+        ...currentPlayers,
+        { firstName: '', lastName: '', gender: 'male', dateOfBirth: '', uniformSize: '' },
+      ]);
+    }
+  };
+
+  const handleRemovePlayer = (index: number) => {
+    setAdditionalPlayerCount((prev) => prev - 1);
+    const currentPlayers = form.getValues('additionalPlayers') || [];
+    form.setValue(
+      'additionalPlayers',
+      currentPlayers.filter((_, i) => i !== index)
+    );
+  };
+
+  const handleSpamVerified = useCallback((verified: boolean) => {
+    setIsSpamVerified(verified);
+  }, []);
+
+  const onSubmit = async (data: RegistrationFormData) => {
+    if (!isSpamVerified) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // TODO: Integrate with Authorize.net payment processing
+      console.log('Registration data:', data);
+      console.log('Season ID:', seasonId);
+      console.log('Total:', totalPrice);
+
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      onSuccess?.(data);
+    } catch (error) {
+      console.error('Registration failed:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="mx-auto max-w-4xl space-y-8 p-4 py-8">
+      {/* Header */}
+      <div className="text-center">
+        <h1 className="text-3xl font-bold">Player Registration</h1>
+        <p className="mt-2 text-lg text-muted-foreground">{seasonName}</p>
+      </div>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          {/* Player Information */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-semibold">Player Information</h2>
+              </div>
+              <p className="text-sm text-muted-foreground">Required fields marked with *</p>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      First Name <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter first name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Last Name <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter last name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="gender"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Gender <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select gender" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="dateOfBirth"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Date of Birth <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Parent/Guardian & Contact Information */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-semibold">Parent/Guardian & Contact Information</h2>
+              </div>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="parentGuardianName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Parent/Guardian Full Name <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter full name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Email Address <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input className="pl-10" placeholder="email@example.com" {...field} />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Phone Number <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input className="pl-10" placeholder="(555) 555-5555" {...field} />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="md:col-span-2">
+                <FormField
+                  control={form.control}
+                  name="streetAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Street Address <span className="text-destructive">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input className="pl-10" placeholder="123 Main Street" {...field} />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      City <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input placeholder="City" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="state"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        State <span className="text-destructive">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="FL" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="zipCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Zip Code <span className="text-destructive">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="32656" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Optional Information */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Shirt className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-semibold">Optional Information</h2>
+              </div>
+              <p className="text-sm text-muted-foreground">Recommended but not required</p>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="requestedTeam"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Requested Team (if available)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Team name or coach name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="uniformSize"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Uniform Size</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select size" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {UNIFORM_SIZES.map((size) => (
+                          <SelectItem key={size.value} value={size.value}>
+                            {size.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="volunteerRole"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>
+                      <div className="flex items-center gap-2">
+                        <Heart className="h-4 w-4 text-primary" />
+                        Volunteer Opportunities
+                      </div>
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a volunteer role (optional)" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {VOLUNTEER_ROLES.map((role) => (
+                          <SelectItem key={role.value} value={role.value}>
+                            {role.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Additional Players */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Plus className="h-5 w-5 text-primary" />
+                  <h2 className="text-xl font-semibold">Additional Players</h2>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddPlayer}
+                  disabled={additionalPlayerCount >= 5}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Player
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Register siblings or additional players (+${baseRegistrationFee} each)
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {additionalPlayerCount === 0 && (
+                <p className="text-center text-muted-foreground py-4">
+                  No additional players added. Click "Add Player" to register more players.
+                </p>
+              )}
+
+              {Array.from({ length: additionalPlayerCount }).map((_, index) => (
+                <div key={index} className="rounded-lg border p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-medium">Additional Player {index + 1}</h3>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemovePlayer(index)}
+                    >
+                      <Minus className="mr-2 h-4 w-4" />
+                      Remove
+                    </Button>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name={`additionalPlayers.${index}.firstName`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            First Name <span className="text-destructive">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter first name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name={`additionalPlayers.${index}.lastName`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            Last Name <span className="text-destructive">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter last name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name={`additionalPlayers.${index}.gender`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            Gender <span className="text-destructive">*</span>
+                          </FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select gender" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="male">Male</SelectItem>
+                              <SelectItem value="female">Female</SelectItem>
+                              <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name={`additionalPlayers.${index}.dateOfBirth`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            Date of Birth <span className="text-destructive">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name={`additionalPlayers.${index}.uniformSize`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Uniform Size</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select size" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {UNIFORM_SIZES.map((size) => (
+                                <SelectItem key={size.value} value={size.value}>
+                                  {size.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Comments */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-semibold">Additional Comments</h2>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Leave any notes or special requests for our team
+              </p>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="comments"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Any special requests, medical notes, or other information you'd like us to know..."
+                        className="min-h-[100px]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Legal Disclaimer & Terms */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-semibold">Terms & Conditions</h2>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Placeholder for legal disclaimer */}
+              <div className="rounded-lg border bg-muted/30 p-4 max-h-64 overflow-y-auto">
+                <h3 className="font-semibold mb-2">
+                  Informed Consent, Liability Waiver & Insurance Notice
+                </h3>
+                <div className="text-sm text-muted-foreground space-y-4">
+                  <p>
+                    <strong>[PLACEHOLDER - LEGAL DISCLAIMER]</strong>
+                  </p>
+                  <p>
+                    This section will contain the official informed consent, liability waiver,
+                    and insurance notice from the Keystone Youth Soccer Club legal team.
+                  </p>
+                  <p>
+                    By checking the box below and signing, you acknowledge that you have read,
+                    understand, and agree to all terms and conditions, including but not limited to:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 ml-4">
+                    <li>Assumption of risk for participation in soccer activities</li>
+                    <li>Release and waiver of liability</li>
+                    <li>Consent for emergency medical treatment</li>
+                    <li>Photo/video release for promotional purposes</li>
+                    <li>Agreement to follow all club rules and regulations</li>
+                    <li>Understanding of refund and cancellation policies</li>
+                  </ul>
+                  <p className="italic">
+                    [Full legal language to be provided by legal team]
+                  </p>
+                </div>
+              </div>
+
+              <FormField
+                control={form.control}
+                name="agreeToTerms"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        I have read and agree to the terms and conditions, liability waiver,
+                        and informed consent above. <span className="text-destructive">*</span>
+                      </FormLabel>
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Signature Section */}
+          <Card>
+            <CardHeader>
+              <h2 className="text-xl font-semibold">Parent/Guardian Signature</h2>
+              <p className="text-sm text-muted-foreground">
+                As the parent or legal guardian, your signature is required to complete registration
+              </p>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="signature"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <SignatureCapture
+                        value={field.value}
+                        onChange={field.onChange}
+                        signerName={form.watch('parentGuardianName')}
+                        error={form.formState.errors.signature?.message}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Spam Protection */}
+          <Card>
+            <CardContent className="pt-6">
+              <SpamProtection
+                onVerified={handleSpamVerified}
+                error={!isSpamVerified && form.formState.isSubmitted ? 'Please complete the verification' : undefined}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Order Summary & Payment */}
+          <Card className="border-primary">
+            <CardHeader className="bg-primary/5">
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-semibold">Order Summary</h2>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Primary Player Registration</span>
+                  <span>${baseRegistrationFee.toFixed(2)}</span>
+                </div>
+                {additionalPlayerCount > 0 && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>
+                      Additional Players ({additionalPlayerCount} x ${baseRegistrationFee.toFixed(2)})
+                    </span>
+                    <span>${(additionalPlayerCount * baseRegistrationFee).toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="border-t pt-2 mt-2">
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Total Due</span>
+                    <span className="text-primary">${totalPrice.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
+                <p>
+                  Payment will be processed securely through Authorize.net.
+                  You will be redirected to complete payment after submitting this form.
+                </p>
+              </div>
+
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full"
+                disabled={isSubmitting || !isSpamVerified}
+              >
+                {isSubmitting ? (
+                  <>
+                    <span className="animate-spin mr-2">⏳</span>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="mr-2 h-5 w-5" />
+                    Proceed to Payment - ${totalPrice.toFixed(2)}
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        </form>
+      </Form>
+    </div>
+  );
+}

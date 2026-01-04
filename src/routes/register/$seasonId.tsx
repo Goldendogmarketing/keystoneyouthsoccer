@@ -1,11 +1,11 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { RegistrationWizard } from '~/components/registration/RegistrationWizard';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { SinglePageRegistration } from '~/components/registration/SinglePageRegistration';
 
 export const Route = createFileRoute('/register/$seasonId')({
   component: RouteComponent,
 });
 
-// Mock season lookup - will be replaced with actual DB query in Phase 4
+// Mock season lookup - will be replaced with actual DB query
 function getMockSeason(seasonId: string) {
   return {
     id: seasonId,
@@ -16,6 +16,7 @@ function getMockSeason(seasonId: string) {
 }
 
 function RouteComponent() {
+  const navigate = useNavigate();
   const { seasonId } = Route.useParams();
   const season = getMockSeason(seasonId);
 
@@ -32,10 +33,14 @@ function RouteComponent() {
   }
 
   return (
-    <RegistrationWizard
+    <SinglePageRegistration
       seasonId={season.id}
       seasonName={season.name}
-      registrationFee={season.registrationFee}
+      baseRegistrationFee={season.registrationFee}
+      onSuccess={(data) => {
+        console.log('Registration successful:', data);
+        navigate({ to: '/register/success', search: { registrationId: 'temp-id' } });
+      }}
     />
   );
 }
