@@ -57,7 +57,7 @@ const registrationSchema = z
     // Player Information
     firstName: z.string().min(1, 'First name is required'),
     lastName: z.string().min(1, 'Last name is required'),
-    gender: z.enum(['male', 'female', 'other'], { required_error: 'Please select gender' }),
+    gender: z.enum(['male', 'female'], { required_error: 'Please select gender' }),
     dateOfBirth: z.string().min(1, 'Date of birth is required'),
 
     // Address
@@ -83,7 +83,7 @@ const registrationSchema = z
         z.object({
           firstName: z.string().min(1, 'First name is required'),
           lastName: z.string().min(1, 'Last name is required'),
-          gender: z.enum(['male', 'female', 'other']),
+          gender: z.enum(['male', 'female']),
           dateOfBirth: z.string().min(1, 'Date of birth is required'),
           uniformSize: z.string().min(1, 'Uniform size is required'),
           isReturningPlayer: z.boolean().default(false),
@@ -502,7 +502,6 @@ export function SinglePageRegistration({
                         <SelectContent>
                           <SelectItem value="male">Male</SelectItem>
                           <SelectItem value="female">Female</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -832,7 +831,6 @@ export function SinglePageRegistration({
                               <SelectContent>
                                 <SelectItem value="male">Male</SelectItem>
                                 <SelectItem value="female">Female</SelectItem>
-                                <SelectItem value="other">Other</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
