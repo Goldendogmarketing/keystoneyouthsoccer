@@ -1,4 +1,4 @@
-import { createServerFn } from '@tanstack/start/server';
+import { createServerFn } from '@tanstack/react-start';
 import { db } from '~/db/db';
 import { players } from '~/db/schema/players.schema';
 import { eq } from 'drizzle-orm';

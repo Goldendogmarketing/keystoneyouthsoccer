@@ -1,4 +1,4 @@
-import { createServerFn } from '@tanstack/start/server';
+import { createServerFn } from '@tanstack/react-start';
 import { db } from '~/db/db';
 import { players, guardians, emergencyContacts } from '~/db/schema/players.schema';
 import { getSession } from '~/lib/auth/middleware';

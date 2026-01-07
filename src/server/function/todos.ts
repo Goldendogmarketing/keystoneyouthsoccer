@@ -1,15 +1,31 @@
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
-
-// Simple in-memory store for demo (in production, use a database)
-const todos: Array<{ id: string; text: string; completed: boolean }> = [];
+import { db } from '~/db/db';
+import { todos } from '~/db/schema/todos.schema';
+import { getSession } from '~/lib/auth/middleware';
+import { eq, and } from 'drizzle-orm';
 
 const todoSchema = z.object({
   text: z.string().min(1, 'Todo text is required'),
 });
 
 export const getTodos = createServerFn({ method: 'GET' }).handler(async () => {
-  return todos;
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  const userTodos = await db
+    .select()
+    .from(todos)
+    .where(eq(todos.userId, session.user.id))
+    .orderBy(todos.createdAt);
+
+  return userTodos.map((todo) => ({
+    id: todo.id,
+    text: todo.text,
+    completed: todo.completed,
+  }));
 });
 
 export const createTodo = createServerFn({ method: 'POST' })
@@ -17,13 +33,25 @@ export const createTodo = createServerFn({ method: 'POST' })
     return todoSchema.parse(data);
   })
   .handler(async ({ data }) => {
-    const newTodo = {
-      id: crypto.randomUUID(),
-      text: data.text,
-      completed: false,
+    const session = await getSession();
+    if (!session?.user?.id) {
+      throw new Error('Unauthorized');
+    }
+
+    const [newTodo] = await db
+      .insert(todos)
+      .values({
+        userId: session.user.id,
+        text: data.text,
+        completed: false,
+      })
+      .returning();
+
+    return {
+      id: newTodo.id,
+      text: newTodo.text,
+      completed: newTodo.completed,
     };
-    todos.push(newTodo);
-    return newTodo;
   });
 
 export const toggleTodo = createServerFn({ method: 'POST' })
@@ -31,12 +59,35 @@ export const toggleTodo = createServerFn({ method: 'POST' })
     return z.object({ id: z.string() }).parse(data);
   })
   .handler(async ({ data }) => {
-    const todo = todos.find((t) => t.id === data.id);
-    if (todo) {
-      todo.completed = !todo.completed;
-      return todo;
+    const session = await getSession();
+    if (!session?.user?.id) {
+      throw new Error('Unauthorized');
     }
-    throw new Error('Todo not found');
+
+    // First check if the todo exists and belongs to the user
+    const [existingTodo] = await db
+      .select()
+      .from(todos)
+      .where(and(eq(todos.id, data.id), eq(todos.userId, session.user.id)));
+
+    if (!existingTodo) {
+      throw new Error('Todo not found');
+    }
+
+    const [updatedTodo] = await db
+      .update(todos)
+      .set({
+        completed: !existingTodo.completed,
+        updatedAt: new Date(),
+      })
+      .where(eq(todos.id, data.id))
+      .returning();
+
+    return {
+      id: updatedTodo.id,
+      text: updatedTodo.text,
+      completed: updatedTodo.completed,
+    };
   });
 
 export const deleteTodo = createServerFn({ method: 'POST' })
@@ -44,10 +95,22 @@ export const deleteTodo = createServerFn({ method: 'POST' })
     return z.object({ id: z.string() }).parse(data);
   })
   .handler(async ({ data }) => {
-    const index = todos.findIndex((t) => t.id === data.id);
-    if (index !== -1) {
-      todos.splice(index, 1);
-      return { success: true };
+    const session = await getSession();
+    if (!session?.user?.id) {
+      throw new Error('Unauthorized');
     }
-    throw new Error('Todo not found');
+
+    // First check if the todo exists and belongs to the user
+    const [existingTodo] = await db
+      .select()
+      .from(todos)
+      .where(and(eq(todos.id, data.id), eq(todos.userId, session.user.id)));
+
+    if (!existingTodo) {
+      throw new Error('Todo not found');
+    }
+
+    await db.delete(todos).where(eq(todos.id, data.id));
+
+    return { success: true };
   });

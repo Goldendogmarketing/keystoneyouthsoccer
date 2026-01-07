@@ -1,4 +1,4 @@
-import { createServerFn } from '@tanstack/start/server';
+import { createServerFn } from '@tanstack/react-start';
 import { db } from '~/db/db';
 import { teams, teamRoster } from '~/db/schema/teams.schema';
 import { players } from '~/db/schema/players.schema';

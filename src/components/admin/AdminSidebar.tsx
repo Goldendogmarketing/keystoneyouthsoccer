@@ -15,6 +15,10 @@ import {
   LogOut,
   ArrowLeft,
   Settings,
+  CalendarDays,
+  Megaphone,
+  MessageSquare,
+  Layers,
 } from 'lucide-react';
 import { Button } from '~/components/ui/button';
 import { signOut } from '~/lib/auth/client';
@@ -24,6 +28,7 @@ const navigationSections = [
     title: 'Dashboard',
     items: [
       { name: 'Overview', href: '/admin', icon: Home },
+      { name: 'Calendar', href: '/admin/calendar', icon: CalendarDays },
       { name: 'Reports', href: '/admin/reports', icon: BarChart },
     ],
   },
@@ -33,6 +38,7 @@ const navigationSections = [
       { name: 'Registrations', href: '/admin/registrations', icon: FileText },
       { name: 'Players', href: '/admin/players', icon: Users },
       { name: 'Teams', href: '/admin/teams', icon: Shield },
+      { name: 'Leagues', href: '/admin/leagues', icon: Layers },
       { name: 'Seasons', href: '/admin/seasons', icon: Calendar },
     ],
   },
@@ -47,6 +53,8 @@ const navigationSections = [
   {
     title: 'Content & Communication',
     items: [
+      { name: 'Announcements', href: '/admin/announcements', icon: Megaphone },
+      { name: 'Communications', href: '/admin/communications', icon: MessageSquare },
       { name: 'Content', href: '/admin/content', icon: FileCode },
       { name: 'Emails', href: '/admin/emails', icon: Mail },
     ],

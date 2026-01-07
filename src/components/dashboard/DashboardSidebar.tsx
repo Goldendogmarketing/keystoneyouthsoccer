@@ -1,6 +1,6 @@
 import { Link, useRouterState } from '@tanstack/react-router';
 import { cn } from '~/lib/utils';
-import { Home, Users, FileText, CreditCard, Calendar, User, LogOut, ArrowLeft } from 'lucide-react';
+import { Home, Users, FileText, CreditCard, Calendar, User, LogOut, ArrowLeft, CheckSquare } from 'lucide-react';
 import { Button } from '~/components/ui/button';
 import { signOut } from '~/lib/auth/client';
 
@@ -10,6 +10,7 @@ const navigation = [
   { name: 'Registrations', href: '/dashboard/registrations', icon: FileText },
   { name: 'Payments', href: '/dashboard/payments', icon: CreditCard },
   { name: 'Schedule', href: '/dashboard/schedule', icon: Calendar },
+  { name: 'To-Do List', href: '/dashboard/todos', icon: CheckSquare },
   { name: 'Account', href: '/dashboard/account', icon: User },
 ];
 
