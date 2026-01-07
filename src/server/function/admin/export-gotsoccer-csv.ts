@@ -13,7 +13,7 @@ const exportCsvSchema = z.object({
 });
 
 export const exportGotSoccerCsv = createServerFn({ method: 'POST' })
-  .validator((data: unknown) => exportCsvSchema.parse(data))
+  .inputValidator((data: unknown) => exportCsvSchema.parse(data))
   .handler(async ({ data }) => {
     await requireAdmin();
 

@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '~/components/ui/card';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
@@ -17,124 +18,90 @@ import {
   AlertCircle,
   FileText,
   History,
+  Loader2,
 } from 'lucide-react';
+import { communicationsQueries } from '~/lib/communications/queries';
+import { sendMessage } from '~/server/function/communications';
 
 export const Route = createFileRoute('/(admin)/admin/communications')({
   component: AdminCommunications,
 });
 
-type RecipientType = 'all' | 'team' | 'league' | 'individual';
+type RecipientType = 'all' | 'team' | 'season' | 'individual';
 type MessageType = 'email' | 'sms';
 
-interface MessageTemplate {
-  id: string;
-  name: string;
-  subject: string;
-  body: string;
-  type: MessageType;
-}
-
-interface SentMessage {
-  id: string;
-  subject: string;
-  body: string;
-  type: MessageType;
-  recipientType: RecipientType;
-  recipientName: string;
-  sentAt: string;
-  status: 'sent' | 'failed' | 'pending';
-  recipientCount: number;
-}
-
-// Sample templates
-const messageTemplates: MessageTemplate[] = [
-  {
-    id: '1',
-    name: 'Game Cancellation',
-    subject: 'Game Cancelled - {{team}}',
-    body: 'Due to {{reason}}, the game scheduled for {{date}} has been cancelled. We will notify you of the rescheduled date.',
-    type: 'email',
-  },
-  {
-    id: '2',
-    name: 'Practice Reminder',
-    subject: 'Practice Reminder - {{team}}',
-    body: 'This is a reminder that {{team}} has practice on {{date}} at {{time}} at {{location}}.',
-    type: 'email',
-  },
-  {
-    id: '3',
-    name: 'Schedule Change',
-    subject: 'Schedule Change - {{team}}',
-    body: 'There has been a change to the schedule. Please check the updated schedule on our website.',
-    type: 'sms',
-  },
-];
-
-// Sample sent messages
-const sampleSentMessages: SentMessage[] = [
-  {
-    id: '1',
-    subject: 'Practice Cancelled - Weather',
-    body: 'Due to inclement weather, all practices for Saturday have been cancelled.',
-    type: 'email',
-    recipientType: 'all',
-    recipientName: 'All Parents',
-    sentAt: '2026-01-09T10:30:00',
-    status: 'sent',
-    recipientCount: 156,
-  },
-  {
-    id: '2',
-    subject: 'Game Reminder',
-    body: 'Reminder: U10 Lions have a game tomorrow at 2pm at Twin Lakes Park.',
-    type: 'sms',
-    recipientType: 'team',
-    recipientName: 'U10 Lions',
-    sentAt: '2026-01-08T14:00:00',
-    status: 'sent',
-    recipientCount: 14,
-  },
-];
-
-// Sample teams
-const teams = [
-  { id: '1', name: 'U6 Stars' },
-  { id: '2', name: 'U8 Tigers' },
-  { id: '3', name: 'U10 Lions' },
-  { id: '4', name: 'U12 Eagles' },
-];
-
-// Sample leagues
-const leagues = [
-  { id: '1', name: 'Spring 2026' },
-  { id: '2', name: 'Fall 2026' },
-];
-
 function AdminCommunications() {
+  const queryClient = useQueryClient();
+
+  const { data: templates = [], isLoading: templatesLoading } = useQuery(
+    communicationsQueries.activeTemplates()
+  );
+  const { data: messageLogs = [], isLoading: logsLoading } = useQuery(communicationsQueries.logs());
+  const { data: teams = [] } = useQuery(communicationsQueries.teams());
+  const { data: seasons = [] } = useQuery(communicationsQueries.seasons());
+  const { data: stats } = useQuery(communicationsQueries.stats());
+
   const [messageType, setMessageType] = useState<MessageType>('email');
   const [recipientType, setRecipientType] = useState<RecipientType>('all');
   const [selectedTeam, setSelectedTeam] = useState('');
-  const [selectedLeague, setSelectedLeague] = useState('');
+  const [selectedSeason, setSelectedSeason] = useState('');
+  const [recipientEmail, setRecipientEmail] = useState('');
+  const [recipientPhone, setRecipientPhone] = useState('');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('');
 
+  const sendMutation = useMutation({
+    mutationFn: async () => {
+      return await sendMessage({
+        data: {
+          type: messageType,
+          subject: messageType === 'email' ? subject : undefined,
+          body: message,
+          recipientType,
+          teamId: recipientType === 'team' ? selectedTeam : undefined,
+          seasonId: recipientType === 'season' ? selectedSeason : undefined,
+          recipientEmail: recipientType === 'individual' && messageType === 'email' ? recipientEmail : undefined,
+          recipientPhone: recipientType === 'individual' && messageType === 'sms' ? recipientPhone : undefined,
+        },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['communications'] });
+      // Reset form
+      setSubject('');
+      setMessage('');
+      setSelectedTemplate('');
+      alert('Message sent successfully!');
+    },
+    onError: (error) => {
+      alert(`Failed to send message: ${error.message}`);
+    },
+  });
+
   const handleTemplateSelect = (templateId: string) => {
-    const template = messageTemplates.find((t) => t.id === templateId);
+    const template = templates.find((t) => t.id === templateId);
     if (template) {
       setSelectedTemplate(templateId);
       setSubject(template.subject);
       setMessage(template.body);
-      setMessageType(template.type);
     }
   };
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement actual sending logic
-    alert('Message sent! (This is a demo - database integration pending)');
+    sendMutation.mutate();
   };
+
+  const isLoading = templatesLoading || logsLoading;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -152,7 +119,7 @@ function AdminCommunications() {
           <Card>
             <CardHeader>
               <CardTitle>Compose Message</CardTitle>
-              <CardDescription>Send email or SMS to parents, teams, or leagues</CardDescription>
+              <CardDescription>Send email or SMS to parents, teams, or seasons</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSend} className="space-y-4">
@@ -203,12 +170,12 @@ function AdminCommunications() {
                     </Button>
                     <Button
                       type="button"
-                      variant={recipientType === 'league' ? 'default' : 'outline'}
-                      onClick={() => setRecipientType('league')}
+                      variant={recipientType === 'season' ? 'default' : 'outline'}
+                      onClick={() => setRecipientType('season')}
                       className="justify-start"
                     >
                       <Calendar className="mr-2 h-4 w-4" />
-                      League
+                      Season
                     </Button>
                     <Button
                       type="button"
@@ -222,7 +189,7 @@ function AdminCommunications() {
                   </div>
                 </div>
 
-                {/* Team/League Selection */}
+                {/* Team Selection */}
                 {recipientType === 'team' && (
                   <div className="space-y-2">
                     <Label htmlFor="team">Select Team</Label>
@@ -243,54 +210,74 @@ function AdminCommunications() {
                   </div>
                 )}
 
-                {recipientType === 'league' && (
+                {/* Season Selection */}
+                {recipientType === 'season' && (
                   <div className="space-y-2">
-                    <Label htmlFor="league">Select League</Label>
+                    <Label htmlFor="season">Select Season</Label>
                     <select
-                      id="league"
-                      value={selectedLeague}
-                      onChange={(e) => setSelectedLeague(e.target.value)}
+                      id="season"
+                      value={selectedSeason}
+                      onChange={(e) => setSelectedSeason(e.target.value)}
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       required
                     >
-                      <option value="">Choose a league...</option>
-                      {leagues.map((league) => (
-                        <option key={league.id} value={league.id}>
-                          {league.name}
+                      <option value="">Choose a season...</option>
+                      {seasons.map((season) => (
+                        <option key={season.id} value={season.id}>
+                          {season.name}
                         </option>
                       ))}
                     </select>
                   </div>
                 )}
 
+                {/* Individual Recipient */}
                 {recipientType === 'individual' && (
                   <div className="space-y-2">
-                    <Label htmlFor="email">Recipient Email/Phone</Label>
-                    <Input
-                      id="email"
-                      placeholder={messageType === 'email' ? 'email@example.com' : '+1 (555) 123-4567'}
-                      required
-                    />
+                    <Label htmlFor="recipient">
+                      {messageType === 'email' ? 'Recipient Email' : 'Recipient Phone'}
+                    </Label>
+                    {messageType === 'email' ? (
+                      <Input
+                        id="recipient"
+                        type="email"
+                        value={recipientEmail}
+                        onChange={(e) => setRecipientEmail(e.target.value)}
+                        placeholder="email@example.com"
+                        required
+                      />
+                    ) : (
+                      <Input
+                        id="recipient"
+                        type="tel"
+                        value={recipientPhone}
+                        onChange={(e) => setRecipientPhone(e.target.value)}
+                        placeholder="+1 (555) 123-4567"
+                        required
+                      />
+                    )}
                   </div>
                 )}
 
                 {/* Template Selection */}
-                <div className="space-y-2">
-                  <Label htmlFor="template">Use Template (Optional)</Label>
-                  <select
-                    id="template"
-                    value={selectedTemplate}
-                    onChange={(e) => handleTemplateSelect(e.target.value)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="">Select a template...</option>
-                    {messageTemplates.map((template) => (
-                      <option key={template.id} value={template.id}>
-                        {template.name} ({template.type.toUpperCase()})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {templates.length > 0 && (
+                  <div className="space-y-2">
+                    <Label htmlFor="template">Use Template (Optional)</Label>
+                    <select
+                      id="template"
+                      value={selectedTemplate}
+                      onChange={(e) => handleTemplateSelect(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Select a template...</option>
+                      {templates.map((template) => (
+                        <option key={template.id} value={template.id}>
+                          {template.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* Subject (Email only) */}
                 {messageType === 'email' && (
@@ -328,18 +315,23 @@ function AdminCommunications() {
                 <div className="rounded-lg bg-muted p-4">
                   <p className="text-sm font-medium">Available Variables:</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Use these in your message: {'{{team}}'}, {'{{date}}'}, {'{{time}}'}, {'{{location}}'}, {'{{playerName}}'}, {'{{reason}}'}
+                    Use these in your message: {'{{team}}'}, {'{{date}}'}, {'{{time}}'}, {'{{location}}'},
+                    {'{{playerName}}'}, {'{{reason}}'}
                   </p>
                 </div>
 
                 {/* Send Button */}
                 <div className="flex gap-2 justify-end">
-                  <Button type="button" variant="outline">
+                  <Button type="button" variant="outline" disabled>
                     <Clock className="mr-2 h-4 w-4" />
                     Schedule
                   </Button>
-                  <Button type="submit">
-                    <Send className="mr-2 h-4 w-4" />
+                  <Button type="submit" disabled={sendMutation.isPending}>
+                    {sendMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="mr-2 h-4 w-4" />
+                    )}
                     Send Now
                   </Button>
                 </div>
@@ -361,21 +353,21 @@ function AdminCommunications() {
                   <Mail className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">Emails Sent (This Month)</span>
                 </div>
-                <span className="font-semibold">234</span>
+                <span className="font-semibold">{stats?.emailsSentThisMonth ?? 0}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <MessageSquare className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">SMS Sent (This Month)</span>
                 </div>
-                <span className="font-semibold">89</span>
+                <span className="font-semibold">{stats?.smsSentThisMonth ?? 0}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">Total Recipients</span>
                 </div>
-                <span className="font-semibold">156</span>
+                <span className="font-semibold">{stats?.totalRecipientsThisMonth ?? 0}</span>
               </div>
             </CardContent>
           </Card>
@@ -391,27 +383,24 @@ function AdminCommunications() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                {messageTemplates.map((template) => (
-                  <button
-                    key={template.id}
-                    onClick={() => handleTemplateSelect(template.id)}
-                    className="w-full text-left rounded-lg border p-3 hover:bg-muted transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm">{template.name}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded ${
-                        template.type === 'email' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
-                      }`}>
-                        {template.type.toUpperCase()}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1 truncate">
-                      {template.body}
-                    </p>
-                  </button>
-                ))}
-              </div>
+              {templates.length > 0 ? (
+                <div className="space-y-2">
+                  {templates.map((template) => (
+                    <button
+                      key={template.id}
+                      onClick={() => handleTemplateSelect(template.id)}
+                      className="w-full text-left rounded-lg border p-3 hover:bg-muted transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-sm">{template.name}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 truncate">{template.body}</p>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">No templates available</p>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -426,50 +415,58 @@ function AdminCommunications() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="divide-y">
-            {sampleSentMessages.map((msg) => (
-              <div key={msg.id} className="flex items-center justify-between py-4">
-                <div className="flex items-center gap-4">
-                  <div className={`rounded-full p-2 ${
-                    msg.type === 'email' ? 'bg-blue-100' : 'bg-green-100'
-                  }`}>
-                    {msg.type === 'email' ? (
-                      <Mail className="h-4 w-4 text-blue-600" />
+          {messageLogs.length > 0 ? (
+            <div className="divide-y">
+              {messageLogs.map((msg) => (
+                <div key={msg.id} className="flex items-center justify-between py-4">
+                  <div className="flex items-center gap-4">
+                    <div
+                      className={`rounded-full p-2 ${msg.type === 'email' ? 'bg-blue-100' : 'bg-green-100'}`}
+                    >
+                      {msg.type === 'email' ? (
+                        <Mail className="h-4 w-4 text-blue-600" />
+                      ) : (
+                        <MessageSquare className="h-4 w-4 text-green-600" />
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="font-semibold">{msg.subject || 'SMS Message'}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        To: {msg.recipientType === 'all' ? 'All Parents' : msg.recipientType} (
+                        {msg.recipientCount} recipients)
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(msg.sentAt).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {msg.status === 'sent' ? (
+                      <span className="flex items-center gap-1 text-green-600 text-sm">
+                        <CheckCircle className="h-4 w-4" />
+                        Sent
+                      </span>
+                    ) : msg.status === 'failed' ? (
+                      <span className="flex items-center gap-1 text-red-600 text-sm">
+                        <AlertCircle className="h-4 w-4" />
+                        Failed
+                      </span>
                     ) : (
-                      <MessageSquare className="h-4 w-4 text-green-600" />
+                      <span className="flex items-center gap-1 text-yellow-600 text-sm">
+                        <Clock className="h-4 w-4" />
+                        Pending
+                      </span>
                     )}
                   </div>
-                  <div>
-                    <h4 className="font-semibold">{msg.subject}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      To: {msg.recipientName} ({msg.recipientCount} recipients)
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(msg.sentAt).toLocaleString()}
-                    </p>
-                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {msg.status === 'sent' ? (
-                    <span className="flex items-center gap-1 text-green-600 text-sm">
-                      <CheckCircle className="h-4 w-4" />
-                      Sent
-                    </span>
-                  ) : msg.status === 'failed' ? (
-                    <span className="flex items-center gap-1 text-red-600 text-sm">
-                      <AlertCircle className="h-4 w-4" />
-                      Failed
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1 text-yellow-600 text-sm">
-                      <Clock className="h-4 w-4" />
-                      Pending
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <History className="mx-auto h-12 w-12 text-muted-foreground/50 mb-2" />
+              No messages sent yet
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

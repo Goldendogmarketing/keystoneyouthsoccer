@@ -40,7 +40,7 @@ const createPlayerSchema = z.object({
 });
 
 export const createPlayer = createServerFn({ method: 'POST' })
-  .validator((data: unknown) => createPlayerSchema.parse(data))
+  .inputValidator((data: unknown) => createPlayerSchema.parse(data))
   .handler(async ({ data }) => {
     const session = await getSession();
     if (!session?.user?.id) {

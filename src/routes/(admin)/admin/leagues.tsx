@@ -1,9 +1,19 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '~/components/ui/card';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
+import { Textarea } from '~/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '~/components/ui/dialog';
 import {
   Plus,
   Layers,
@@ -14,104 +24,149 @@ import {
   Calendar,
   ChevronRight,
   Settings,
+  Loader2,
 } from 'lucide-react';
+import { leaguesQueries } from '~/lib/leagues/queries';
+import { createLeague, updateLeague, deleteLeague, toggleLeagueActive } from '~/server/function/leagues';
 
 export const Route = createFileRoute('/(admin)/admin/leagues')({
   component: AdminLeagues,
 });
 
-interface Division {
-  id: string;
+interface FormData {
   name: string;
-  ageGroup: string;
-  teamCount: number;
-}
-
-interface League {
-  id: string;
-  name: string;
-  season: string;
   startDate: string;
   endDate: string;
-  isActive: boolean;
-  divisions: Division[];
-  teamCount: number;
-  playerCount: number;
+  registrationOpenDate: string;
+  registrationCloseDate: string;
+  registrationFee: string;
+  description: string;
 }
 
-// Sample leagues - will be replaced with database data
-const sampleLeagues: League[] = [
-  {
-    id: '1',
-    name: 'Spring 2026',
-    season: 'Spring',
-    startDate: '2026-03-01',
-    endDate: '2026-05-31',
-    isActive: true,
-    divisions: [
-      { id: '1', name: 'U6 Division', ageGroup: 'U6', teamCount: 6 },
-      { id: '2', name: 'U8 Division', ageGroup: 'U8', teamCount: 8 },
-      { id: '3', name: 'U10 Division', ageGroup: 'U10', teamCount: 6 },
-      { id: '4', name: 'U12 Division', ageGroup: 'U12', teamCount: 4 },
-    ],
-    teamCount: 24,
-    playerCount: 288,
-  },
-  {
-    id: '2',
-    name: 'Fall 2025',
-    season: 'Fall',
-    startDate: '2025-09-01',
-    endDate: '2025-11-30',
-    isActive: false,
-    divisions: [
-      { id: '5', name: 'U6 Division', ageGroup: 'U6', teamCount: 5 },
-      { id: '6', name: 'U8 Division', ageGroup: 'U8', teamCount: 7 },
-      { id: '7', name: 'U10 Division', ageGroup: 'U10', teamCount: 5 },
-    ],
-    teamCount: 17,
-    playerCount: 204,
-  },
-];
+const initialFormData: FormData = {
+  name: '',
+  startDate: '',
+  endDate: '',
+  registrationOpenDate: '',
+  registrationCloseDate: '',
+  registrationFee: '75.00',
+  description: '',
+};
 
 function AdminLeagues() {
-  const [leagues, setLeagues] = useState<League[]>(sampleLeagues);
+  const queryClient = useQueryClient();
+  const { data: leagues = [], isLoading } = useQuery(leaguesQueries.all());
+
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedLeague, setExpandedLeague] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    season: 'Spring',
-    startDate: '',
-    endDate: '',
+  const [formData, setFormData] = useState<FormData>(initialFormData);
+
+  const createMutation = useMutation({
+    mutationFn: async (data: FormData) => {
+      return await createLeague({
+        data: {
+          name: data.name,
+          startDate: data.startDate,
+          endDate: data.endDate,
+          registrationOpenDate: data.registrationOpenDate,
+          registrationCloseDate: data.registrationCloseDate,
+          registrationFee: data.registrationFee,
+          description: data.description || undefined,
+        },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leagues'] });
+      resetForm();
+    },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newLeague: League = {
-      id: Date.now().toString(),
-      ...formData,
-      isActive: false,
-      divisions: [],
-      teamCount: 0,
-      playerCount: 0,
-    };
-    setLeagues([newLeague, ...leagues]);
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: FormData }) => {
+      return await updateLeague({
+        data: {
+          id,
+          name: data.name,
+          startDate: data.startDate,
+          endDate: data.endDate,
+          registrationOpenDate: data.registrationOpenDate,
+          registrationCloseDate: data.registrationCloseDate,
+          registrationFee: data.registrationFee,
+          description: data.description || undefined,
+        },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leagues'] });
+      resetForm();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await deleteLeague({ data: { id } });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leagues'] });
+    },
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await toggleLeagueActive({ data: { id } });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leagues'] });
+    },
+  });
+
+  const resetForm = () => {
     setShowForm(false);
-    setFormData({ name: '', season: 'Spring', startDate: '', endDate: '' });
+    setEditingId(null);
+    setFormData(initialFormData);
   };
 
-  const handleToggleActive = (id: string) => {
-    setLeagues(leagues.map((l) => (l.id === id ? { ...l, isActive: !l.isActive } : l)));
+  const handleEdit = (league: (typeof leagues)[0]) => {
+    setEditingId(league.id);
+    setFormData({
+      name: league.name,
+      startDate: league.startDate,
+      endDate: league.endDate,
+      registrationOpenDate: league.registrationOpenDate,
+      registrationCloseDate: league.registrationCloseDate,
+      registrationFee: league.registrationFee,
+      description: league.description || '',
+    });
+    setShowForm(true);
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this league?')) {
-      setLeagues(leagues.filter((l) => l.id !== id));
+    if (confirm('Are you sure you want to delete this league? This will also delete all associated teams.')) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, data: formData });
+    } else {
+      createMutation.mutate(formData);
     }
   };
 
   const activeLeagues = leagues.filter((l) => l.isActive);
   const pastLeagues = leagues.filter((l) => !l.isActive);
+  const isPending = createMutation.isPending || updateMutation.isPending;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -121,81 +176,113 @@ function AdminLeagues() {
           <h1 className="text-3xl font-bold">Leagues</h1>
           <p className="text-muted-foreground">Manage leagues, divisions, and team assignments</p>
         </div>
-        <Button onClick={() => setShowForm(true)}>
+        <Button onClick={() => { setShowForm(true); setEditingId(null); setFormData(initialFormData); }}>
           <Plus className="mr-2 h-4 w-4" />
           Create League
         </Button>
       </div>
 
-      {/* Create League Form */}
-      {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Create New League</CardTitle>
-            <CardDescription>Set up a new league for an upcoming season</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="name">League Name</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g., Spring 2026"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="season">Season</Label>
-                  <select
-                    id="season"
-                    value={formData.season}
-                    onChange={(e) => setFormData({ ...formData, season: e.target.value })}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="Spring">Spring</option>
-                    <option value="Fall">Fall</option>
-                    <option value="Summer">Summer</option>
-                    <option value="Winter">Winter</option>
-                  </select>
-                </div>
-              </div>
+      {/* Create/Edit League Dialog */}
+      <Dialog open={showForm} onOpenChange={(open) => !open && resetForm()}>
+        <DialogContent className="sm:max-w-[550px]">
+          <DialogHeader>
+            <DialogTitle>{editingId ? 'Edit League' : 'Create New League'}</DialogTitle>
+            <DialogDescription>Set up a new league for an upcoming season</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">League Name</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g., Spring 2026"
+                required
+              />
+            </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="startDate">Start Date</Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={formData.startDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endDate">End Date</Label>
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={formData.endDate}
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                    required
-                  />
-                </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="startDate">Season Start</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  required
+                />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="endDate">Season End</Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={formData.endDate}
+                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
 
-              <div className="flex gap-2 justify-end">
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">Create League</Button>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="registrationOpenDate">Registration Opens</Label>
+                <Input
+                  id="registrationOpenDate"
+                  type="date"
+                  value={formData.registrationOpenDate}
+                  onChange={(e) => setFormData({ ...formData, registrationOpenDate: e.target.value })}
+                  required
+                />
               </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+              <div className="space-y-2">
+                <Label htmlFor="registrationCloseDate">Registration Closes</Label>
+                <Input
+                  id="registrationCloseDate"
+                  type="date"
+                  value={formData.registrationCloseDate}
+                  onChange={(e) => setFormData({ ...formData, registrationCloseDate: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="registrationFee">Registration Fee ($)</Label>
+              <Input
+                id="registrationFee"
+                type="number"
+                step="0.01"
+                value={formData.registrationFee}
+                onChange={(e) => setFormData({ ...formData, registrationFee: e.target.value })}
+                placeholder="75.00"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description (optional)</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="League description..."
+                rows={2}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={resetForm} disabled={isPending}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isPending}>
+                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {editingId ? 'Save Changes' : 'Create League'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Active Leagues */}
       <div className="space-y-4">
@@ -214,20 +301,25 @@ function AdminLeagues() {
                       <CardTitle className="flex items-center gap-2">
                         <Layers className="h-5 w-5" />
                         {league.name}
-                        <span className="text-xs px-2 py-0.5 rounded bg-green-100 text-green-700">
-                          Active
-                        </span>
+                        <span className="text-xs px-2 py-0.5 rounded bg-green-100 text-green-700">Active</span>
                       </CardTitle>
                       <CardDescription className="mt-1">
-                        {new Date(league.startDate).toLocaleDateString()} - {new Date(league.endDate).toLocaleDateString()}
+                        {new Date(league.startDate).toLocaleDateString()} -{' '}
+                        {new Date(league.endDate).toLocaleDateString()}
+                        {' • '}${league.registrationFee} registration
                       </CardDescription>
                     </div>
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="icon">
-                        <Settings className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon">
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(league)}>
                         <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => toggleMutation.mutate(league.id)}
+                        disabled={toggleMutation.isPending}
+                      >
+                        <Settings className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
@@ -238,7 +330,7 @@ function AdminLeagues() {
                     <div className="text-center p-4 rounded-lg bg-muted">
                       <div className="flex items-center justify-center gap-2 text-muted-foreground mb-1">
                         <Layers className="h-4 w-4" />
-                        <span className="text-sm">Divisions</span>
+                        <span className="text-sm">Age Groups</span>
                       </div>
                       <span className="text-2xl font-bold">{league.divisions.length}</span>
                     </div>
@@ -259,44 +351,46 @@ function AdminLeagues() {
                   </div>
 
                   {/* Divisions */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-semibold">Divisions</h4>
-                      <Button variant="outline" size="sm">
-                        <Plus className="mr-2 h-3 w-3" />
-                        Add Division
-                      </Button>
-                    </div>
-                    <div className="divide-y rounded-lg border">
-                      {league.divisions.map((division) => (
-                        <div key={division.id} className="flex items-center justify-between p-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                              <span className="text-sm font-bold text-primary">{division.ageGroup}</span>
+                  {league.divisions.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold">Age Groups</h4>
+                      </div>
+                      <div className="divide-y rounded-lg border">
+                        {league.divisions.map((division) => (
+                          <div key={division.ageGroup} className="flex items-center justify-between p-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <span className="text-sm font-bold text-primary">{division.ageGroup}</span>
+                              </div>
+                              <div>
+                                <p className="font-medium">{division.ageGroup} Division</p>
+                                <p className="text-sm text-muted-foreground">{division.teamCount} teams</p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-medium">{division.name}</p>
-                              <p className="text-sm text-muted-foreground">{division.teamCount} teams</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
                             <Button variant="ghost" size="sm">
                               Manage Teams
                               <ChevronRight className="ml-1 h-4 w-4" />
                             </Button>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {league.divisions.length === 0 && (
+                    <div className="text-center py-4 text-muted-foreground border rounded-lg">
+                      No teams registered yet
+                    </div>
+                  )}
 
                   {/* Actions */}
                   <div className="flex gap-2 mt-6 pt-4 border-t">
-                    <Button variant="outline" className="flex-1">
+                    <Button variant="outline" className="flex-1" disabled>
                       <Calendar className="mr-2 h-4 w-4" />
                       Generate Schedule
                     </Button>
-                    <Button variant="outline" className="flex-1">
+                    <Button variant="outline" className="flex-1" disabled>
                       <Users className="mr-2 h-4 w-4" />
                       Team Assignments
                     </Button>
@@ -326,7 +420,7 @@ function AdminLeagues() {
         <div className="space-y-4">
           <h2 className="text-xl font-semibold flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-gray-400" />
-            Past Leagues
+            Past / Inactive Leagues
           </h2>
 
           <div className="space-y-4">
@@ -338,24 +432,33 @@ function AdminLeagues() {
                       <CardTitle className="flex items-center gap-2">
                         <Layers className="h-5 w-5" />
                         {league.name}
-                        <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-700">
-                          Completed
-                        </span>
+                        <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-700">Inactive</span>
                       </CardTitle>
                       <CardDescription className="mt-1">
-                        {new Date(league.startDate).toLocaleDateString()} - {new Date(league.endDate).toLocaleDateString()}
-                        {' • '}{league.divisions.length} divisions • {league.teamCount} teams • {league.playerCount} players
+                        {new Date(league.startDate).toLocaleDateString()} -{' '}
+                        {new Date(league.endDate).toLocaleDateString()}
+                        {' • '}{league.divisions.length} age groups • {league.teamCount} teams •{' '}
+                        {league.playerCount} players
                       </CardDescription>
                     </div>
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => handleToggleActive(league.id)}>
-                        Reactivate
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleMutation.mutate(league.id)}
+                        disabled={toggleMutation.isPending}
+                      >
+                        Activate
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(league)}>
+                        <Edit className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="text-destructive"
                         onClick={() => handleDelete(league.id)}
+                        disabled={deleteMutation.isPending}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -368,18 +471,27 @@ function AdminLeagues() {
                     className="w-full justify-between"
                     onClick={() => setExpandedLeague(expandedLeague === league.id ? null : league.id)}
                   >
-                    View Divisions & Stats
-                    <ChevronRight className={`h-4 w-4 transition-transform ${expandedLeague === league.id ? 'rotate-90' : ''}`} />
+                    View Age Groups & Stats
+                    <ChevronRight
+                      className={`h-4 w-4 transition-transform ${expandedLeague === league.id ? 'rotate-90' : ''}`}
+                    />
                   </Button>
 
                   {expandedLeague === league.id && (
                     <div className="mt-4 space-y-2">
-                      {league.divisions.map((division) => (
-                        <div key={division.id} className="flex items-center justify-between p-3 rounded-lg bg-muted">
-                          <span className="font-medium">{division.name}</span>
-                          <span className="text-sm text-muted-foreground">{division.teamCount} teams</span>
-                        </div>
-                      ))}
+                      {league.divisions.length > 0 ? (
+                        league.divisions.map((division) => (
+                          <div
+                            key={division.ageGroup}
+                            className="flex items-center justify-between p-3 rounded-lg bg-muted"
+                          >
+                            <span className="font-medium">{division.ageGroup} Division</span>
+                            <span className="text-sm text-muted-foreground">{division.teamCount} teams</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-4 text-muted-foreground">No teams were registered</div>
+                      )}
                     </div>
                   )}
                 </CardContent>

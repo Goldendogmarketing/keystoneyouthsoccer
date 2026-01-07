@@ -9,7 +9,7 @@ const getRegistrationSchema = z.object({
 });
 
 export const getRegistration = createServerFn({ method: 'GET' })
-  .validator((data: unknown) => getRegistrationSchema.parse(data))
+  .inputValidator((data: unknown) => getRegistrationSchema.parse(data))
   .handler(async ({ data, context }) => {
     // Get authenticated user
     const session = await requireAuth({ context });

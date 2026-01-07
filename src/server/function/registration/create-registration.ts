@@ -47,7 +47,7 @@ const createRegistrationSchema = z.object({
 });
 
 export const createRegistration = createServerFn({ method: 'POST' })
-  .validator((data: unknown) => createRegistrationSchema.parse(data))
+  .inputValidator((data: unknown) => createRegistrationSchema.parse(data))
   .handler(async ({ data, context }) => {
     // Get authenticated user
     const session = await requireAuth({ context });

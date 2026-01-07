@@ -17,3 +17,5 @@ export * from './schema/audit-logs.schema';
 export * from './schema/email-templates.schema';
 export * from './schema/site-settings.schema';
 export * from './schema/sms-logs.schema';
+export * from './schema/events.schema';
+export * from './schema/message-logs.schema';

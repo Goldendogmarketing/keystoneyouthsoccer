@@ -9,7 +9,7 @@ const confirmPaymentSchema = z.object({
 });
 
 export const confirmPayment = createServerFn({ method: 'POST' })
-  .validator((data: unknown) => confirmPaymentSchema.parse(data))
+  .inputValidator((data: unknown) => confirmPaymentSchema.parse(data))
   .handler(async ({ data, context }) => {
     // Verify user is authenticated
     const session = await requireAuth({ context });

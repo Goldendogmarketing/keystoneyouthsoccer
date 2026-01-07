@@ -11,7 +11,7 @@ const createPaymentIntentSchema = z.object({
 });
 
 export const createPaymentIntent = createServerFn({ method: 'POST' })
-  .validator((data: unknown) => createPaymentIntentSchema.parse(data))
+  .inputValidator((data: unknown) => createPaymentIntentSchema.parse(data))
   .handler(async ({ data, context }) => {
     // Verify user is authenticated
     const session = await requireAuth({ context });

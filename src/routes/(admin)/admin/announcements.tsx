@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '~/components/ui/card';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
@@ -17,7 +18,15 @@ import {
   CheckCircle,
   AlertTriangle,
   ExternalLink,
+  Loader2,
 } from 'lucide-react';
+import { announcementsQueries } from '~/lib/announcements/queries';
+import {
+  createAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement,
+  toggleAnnouncementActive,
+} from '~/server/function/announcements';
 
 export const Route = createFileRoute('/(admin)/admin/announcements')({
   component: AdminAnnouncements,
@@ -25,54 +34,25 @@ export const Route = createFileRoute('/(admin)/admin/announcements')({
 
 type AnnouncementType = 'info' | 'warning' | 'success' | 'urgent';
 
-interface Announcement {
-  id: string;
+interface FormData {
   title: string;
   message: string;
   type: AnnouncementType;
-  linkUrl?: string;
-  linkText?: string;
-  isActive: boolean;
-  startDate?: string;
-  endDate?: string;
-  createdAt: string;
+  linkUrl: string;
+  linkText: string;
+  startDate: string;
+  endDate: string;
 }
 
-// Sample announcements - will be replaced with database data
-const sampleAnnouncements: Announcement[] = [
-  {
-    id: '1',
-    title: 'Spring 2026 Registration Now Open!',
-    message: 'Registration for the Spring 2026 season is now open. Early bird pricing available through January 31st.',
-    type: 'success',
-    linkUrl: '/register',
-    linkText: 'Register Now',
-    isActive: true,
-    startDate: '2026-01-01',
-    endDate: '2026-02-28',
-    createdAt: '2026-01-01',
-  },
-  {
-    id: '2',
-    title: 'Practice Cancelled - Weather',
-    message: 'Due to inclement weather, all practices for Saturday, January 10th have been cancelled.',
-    type: 'urgent',
-    isActive: true,
-    startDate: '2026-01-09',
-    endDate: '2026-01-11',
-    createdAt: '2026-01-09',
-  },
-  {
-    id: '3',
-    title: 'Volunteer Coaches Needed',
-    message: 'We are looking for volunteer coaches for the U6 and U8 age groups. No experience necessary - training provided!',
-    type: 'info',
-    linkUrl: '/contact',
-    linkText: 'Contact Us',
-    isActive: false,
-    createdAt: '2025-12-15',
-  },
-];
+const initialFormData: FormData = {
+  title: '',
+  message: '',
+  type: 'info',
+  linkUrl: '',
+  linkText: '',
+  startDate: '',
+  endDate: '',
+};
 
 const typeConfig: Record<AnnouncementType, { icon: React.ElementType; color: string; bgColor: string; label: string }> = {
   info: { icon: Info, color: 'text-blue-600', bgColor: 'bg-blue-100', label: 'Info' },
@@ -82,69 +62,118 @@ const typeConfig: Record<AnnouncementType, { icon: React.ElementType; color: str
 };
 
 function AdminAnnouncements() {
-  const [announcements, setAnnouncements] = useState<Announcement[]>(sampleAnnouncements);
+  const queryClient = useQueryClient();
+  const { data: announcements = [], isLoading } = useQuery(announcementsQueries.all());
+
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState<Partial<Announcement>>({
-    title: '',
-    message: '',
-    type: 'info',
-    linkUrl: '',
-    linkText: '',
-    startDate: '',
-    endDate: '',
+  const [formData, setFormData] = useState<FormData>(initialFormData);
+
+  const createMutation = useMutation({
+    mutationFn: async (data: FormData) => {
+      return await createAnnouncement({
+        data: {
+          title: data.title,
+          message: data.message,
+          type: data.type,
+          linkUrl: data.linkUrl || undefined,
+          linkText: data.linkText || undefined,
+          startDate: data.startDate || undefined,
+          endDate: data.endDate || undefined,
+        },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['announcements'] });
+      resetForm();
+    },
   });
 
-  const handleToggleActive = (id: string) => {
-    setAnnouncements(
-      announcements.map((a) => (a.id === id ? { ...a, isActive: !a.isActive } : a))
-    );
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: FormData }) => {
+      return await updateAnnouncement({
+        data: {
+          id,
+          title: data.title,
+          message: data.message,
+          type: data.type,
+          linkUrl: data.linkUrl || undefined,
+          linkText: data.linkText || undefined,
+          startDate: data.startDate || undefined,
+          endDate: data.endDate || undefined,
+        },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['announcements'] });
+      resetForm();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await deleteAnnouncement({ data: { id } });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['announcements'] });
+    },
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await toggleAnnouncementActive({ data: { id } });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['announcements'] });
+    },
+  });
+
+  const resetForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setFormData(initialFormData);
   };
 
-  const handleEdit = (announcement: Announcement) => {
+  const handleEdit = (announcement: typeof announcements[0]) => {
     setEditingId(announcement.id);
-    setFormData(announcement);
+    setFormData({
+      title: announcement.title,
+      message: announcement.message,
+      type: announcement.type as AnnouncementType,
+      linkUrl: announcement.linkUrl || '',
+      linkText: announcement.linkText || '',
+      startDate: announcement.startDate ? new Date(announcement.startDate).toISOString().split('T')[0] : '',
+      endDate: announcement.endDate ? new Date(announcement.endDate).toISOString().split('T')[0] : '',
+    });
     setShowForm(true);
   };
 
   const handleDelete = (id: string) => {
     if (confirm('Are you sure you want to delete this announcement?')) {
-      setAnnouncements(announcements.filter((a) => a.id !== id));
+      deleteMutation.mutate(id);
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingId) {
-      setAnnouncements(
-        announcements.map((a) =>
-          a.id === editingId ? { ...a, ...formData } as Announcement : a
-        )
-      );
+      updateMutation.mutate({ id: editingId, data: formData });
     } else {
-      const newAnnouncement: Announcement = {
-        ...formData,
-        id: Date.now().toString(),
-        isActive: true,
-        createdAt: new Date().toISOString().split('T')[0],
-      } as Announcement;
-      setAnnouncements([newAnnouncement, ...announcements]);
+      createMutation.mutate(formData);
     }
-    setShowForm(false);
-    setEditingId(null);
-    setFormData({
-      title: '',
-      message: '',
-      type: 'info',
-      linkUrl: '',
-      linkText: '',
-      startDate: '',
-      endDate: '',
-    });
   };
 
   const activeAnnouncements = announcements.filter((a) => a.isActive);
   const inactiveAnnouncements = announcements.filter((a) => !a.isActive);
+  const isPending = createMutation.isPending || updateMutation.isPending;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -154,7 +183,7 @@ function AdminAnnouncements() {
           <h1 className="text-3xl font-bold">Announcements</h1>
           <p className="text-muted-foreground">Manage landing page announcements and alerts</p>
         </div>
-        <Button onClick={() => { setShowForm(true); setEditingId(null); }}>
+        <Button onClick={() => { setShowForm(true); setEditingId(null); setFormData(initialFormData); }}>
           <Plus className="mr-2 h-4 w-4" />
           New Announcement
         </Button>
@@ -257,11 +286,11 @@ function AdminAnnouncements() {
               {formData.title && formData.message && (
                 <div className="rounded-lg border p-4">
                   <Label className="text-sm text-muted-foreground">Preview</Label>
-                  <div className={`mt-2 rounded-lg p-4 ${typeConfig[formData.type || 'info'].bgColor}`}>
+                  <div className={`mt-2 rounded-lg p-4 ${typeConfig[formData.type].bgColor}`}>
                     <div className="flex items-start gap-3">
                       {(() => {
-                        const Icon = typeConfig[formData.type || 'info'].icon;
-                        return <Icon className={`h-5 w-5 ${typeConfig[formData.type || 'info'].color}`} />;
+                        const Icon = typeConfig[formData.type].icon;
+                        return <Icon className={`h-5 w-5 ${typeConfig[formData.type].color}`} />;
                       })()}
                       <div>
                         <p className="font-semibold">{formData.title}</p>
@@ -279,10 +308,11 @@ function AdminAnnouncements() {
               )}
 
               <div className="flex gap-2 justify-end">
-                <Button type="button" variant="outline" onClick={() => { setShowForm(false); setEditingId(null); }}>
+                <Button type="button" variant="outline" onClick={resetForm} disabled={isPending}>
                   Cancel
                 </Button>
-                <Button type="submit">
+                <Button type="submit" disabled={isPending}>
+                  {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {editingId ? 'Save Changes' : 'Create Announcement'}
                 </Button>
               </div>
@@ -304,7 +334,7 @@ function AdminAnnouncements() {
           {activeAnnouncements.length > 0 ? (
             <div className="space-y-4">
               {activeAnnouncements.map((announcement) => {
-                const config = typeConfig[announcement.type];
+                const config = typeConfig[announcement.type as AnnouncementType];
                 const Icon = config.icon;
                 return (
                   <div
@@ -320,8 +350,12 @@ function AdminAnnouncements() {
                         <p className="text-sm text-muted-foreground mt-1">{announcement.message}</p>
                         <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                           <span>Type: {config.label}</span>
-                          {announcement.startDate && <span>From: {announcement.startDate}</span>}
-                          {announcement.endDate && <span>Until: {announcement.endDate}</span>}
+                          {announcement.startDate && (
+                            <span>From: {new Date(announcement.startDate).toLocaleDateString()}</span>
+                          )}
+                          {announcement.endDate && (
+                            <span>Until: {new Date(announcement.endDate).toLocaleDateString()}</span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -329,7 +363,12 @@ function AdminAnnouncements() {
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(announcement)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleToggleActive(announcement.id)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => toggleMutation.mutate(announcement.id)}
+                        disabled={toggleMutation.isPending}
+                      >
                         <EyeOff className="h-4 w-4" />
                       </Button>
                       <Button
@@ -337,6 +376,7 @@ function AdminAnnouncements() {
                         size="icon"
                         className="text-destructive"
                         onClick={() => handleDelete(announcement.id)}
+                        disabled={deleteMutation.isPending}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -371,7 +411,7 @@ function AdminAnnouncements() {
           <CardContent>
             <div className="space-y-4">
               {inactiveAnnouncements.map((announcement) => {
-                const config = typeConfig[announcement.type];
+                const config = typeConfig[announcement.type as AnnouncementType];
                 const Icon = config.icon;
                 return (
                   <div
@@ -391,7 +431,12 @@ function AdminAnnouncements() {
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(announcement)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleToggleActive(announcement.id)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => toggleMutation.mutate(announcement.id)}
+                        disabled={toggleMutation.isPending}
+                      >
                         <Eye className="h-4 w-4" />
                       </Button>
                       <Button
@@ -399,6 +444,7 @@ function AdminAnnouncements() {
                         size="icon"
                         className="text-destructive"
                         onClick={() => handleDelete(announcement.id)}
+                        disabled={deleteMutation.isPending}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

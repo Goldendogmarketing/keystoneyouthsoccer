@@ -10,7 +10,7 @@ const deletePlayerSchema = z.object({
 });
 
 export const deletePlayer = createServerFn({ method: 'POST' })
-  .validator((data: unknown) => deletePlayerSchema.parse(data))
+  .inputValidator((data: unknown) => deletePlayerSchema.parse(data))
   .handler(async ({ data }) => {
     const session = await getSession();
     if (!session?.user?.id) {
