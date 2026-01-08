@@ -19,3 +19,4 @@ export * from './schema/site-settings.schema';
 export * from './schema/sms-logs.schema';
 export * from './schema/events.schema';
 export * from './schema/message-logs.schema';
+export * from './schema/guest-registrations.schema';

@@ -7,6 +7,10 @@ export const users = pgTable('users', {
   name: text('name').notNull(),
   phone: text('phone'),
   role: text('role', { enum: ['parent', 'admin', 'coach'] }).notNull().default('parent'),
+  isMasterAdmin: boolean('is_master_admin').default(false).notNull(),
+  isApproved: boolean('is_approved').default(false).notNull(),
+  approvedBy: uuid('approved_by'),
+  approvedAt: timestamp('approved_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -16,16 +20,17 @@ export const accounts = pgTable('accounts', {
   userId: uuid('user_id')
     .references(() => users.id, { onDelete: 'cascade' })
     .notNull(),
-  type: text('type').notNull(),
-  provider: text('provider').notNull(),
-  providerAccountId: text('provider_account_id').notNull(),
-  refreshToken: text('refresh_token'),
+  accountId: text('account_id').notNull(), // Better Auth required - provider's account ID or userId for credentials
+  providerId: text('provider_id').notNull(), // Better Auth required - e.g., "credential", "google", etc.
   accessToken: text('access_token'),
-  expiresAt: timestamp('expires_at'),
-  tokenType: text('token_type'),
+  refreshToken: text('refresh_token'),
+  accessTokenExpiresAt: timestamp('access_token_expires_at'),
+  refreshTokenExpiresAt: timestamp('refresh_token_expires_at'),
   scope: text('scope'),
   idToken: text('id_token'),
-  sessionState: text('session_state'),
+  password: text('password'), // Better Auth stores password hash here for credential provider
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 export const sessions = pgTable('sessions', {
@@ -33,8 +38,10 @@ export const sessions = pgTable('sessions', {
   userId: uuid('user_id')
     .references(() => users.id, { onDelete: 'cascade' })
     .notNull(),
-  sessionToken: text('session_token').notNull().unique(),
-  expires: timestamp('expires').notNull(),
+  token: text('token').notNull().unique(), // Better Auth required field name
+  expiresAt: timestamp('expires_at').notNull(), // Better Auth required field name
   ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

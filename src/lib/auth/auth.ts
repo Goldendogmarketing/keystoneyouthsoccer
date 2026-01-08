@@ -18,8 +18,13 @@ export const auth = betterAuth({
     requireEmailVerification: false, // Set to true in production
   },
   secret: env.BETTER_AUTH_SECRET || 'dev-secret-min-32-chars-long-for-preview-mode',
-  baseURL: env.BETTER_AUTH_URL || 'http://localhost:3001',
-  trustedOrigins: [env.BETTER_AUTH_URL || 'http://localhost:3001'],
+  baseURL: env.BETTER_AUTH_URL || 'http://localhost:3000',
+  trustedOrigins: [env.BETTER_AUTH_URL || 'http://localhost:3000'],
+  advanced: {
+    database: {
+      generateId: false, // Let PostgreSQL generate UUIDs
+    },
+  },
 });
 
 export type Session = typeof auth.$Infer.Session;
