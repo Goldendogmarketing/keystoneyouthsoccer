@@ -76,7 +76,9 @@ function parseParentName(fullName: string): { firstName: string; lastName: strin
 
 // Public function - no auth required for guest registrations
 export const createGuestRegistration = createServerFn({ method: 'POST' })
-  .validator(z.object({ data: createGuestRegistrationSchema }))
+  .inputValidator((input: unknown) => {
+    return z.object({ data: createGuestRegistrationSchema }).parse(input);
+  })
   .handler(async ({ data }) => {
     const formData = data.data;
 

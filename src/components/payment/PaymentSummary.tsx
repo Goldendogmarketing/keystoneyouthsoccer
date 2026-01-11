@@ -7,7 +7,7 @@ interface PaymentSummaryProps {
 }
 
 export function PaymentSummary({ seasonName, playerName, registrationFee }: PaymentSummaryProps) {
-  const processingFee = registrationFee * 0.029 + 0.3; // Stripe fee estimate
+  const processingFee = 0; // No processing fee for Authorize.net (absorbed by org)
   const total = registrationFee + processingFee;
 
   return (

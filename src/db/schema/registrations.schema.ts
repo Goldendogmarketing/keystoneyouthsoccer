@@ -22,7 +22,7 @@ export const registrations = pgTable('registrations', {
   paymentStatus: text('payment_status', {
     enum: ['pending', 'paid', 'failed', 'refunded'],
   }).default('pending'),
-  paymentIntentId: text('payment_intent_id'), // Stripe payment intent ID
+  paymentIntentId: text('payment_intent_id'), // Payment transaction ID (Authorize.net)
   amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
   submittedAt: timestamp('submitted_at'),
   paidAt: timestamp('paid_at'),

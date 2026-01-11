@@ -6,7 +6,9 @@ import { eq, and, gte, lte } from 'drizzle-orm';
 
 // Public function - get season for registration (no auth required)
 export const getSeasonForRegistration = createServerFn({ method: 'GET' })
-  .validator(z.object({ seasonId: z.string().uuid() }))
+  .inputValidator((data: unknown) => {
+    return z.object({ seasonId: z.string().uuid() }).parse(data);
+  })
   .handler(async ({ data }) => {
     const [season] = await db
       .select()

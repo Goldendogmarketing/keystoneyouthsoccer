@@ -47,7 +47,9 @@ function isTestModeEnabled(): boolean {
 
 // Process payment through Authorize.net (or test mode)
 export const processAuthorizeNetPayment = createServerFn({ method: 'POST' })
-  .validator(z.object({ data: processPaymentSchema }))
+  .inputValidator((input: unknown) => {
+    return z.object({ data: processPaymentSchema }).parse(input);
+  })
   .handler(async ({ data }) => {
     const paymentData = data.data;
 

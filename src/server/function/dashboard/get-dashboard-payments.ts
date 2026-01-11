@@ -17,7 +17,7 @@ export const getDashboardPayments = createServerFn({ method: 'GET' }).handler(as
       id: registrations.id,
       amount: registrations.amount,
       paymentStatus: registrations.paymentStatus,
-      stripePaymentIntentId: registrations.stripePaymentIntentId,
+      paymentIntentId: registrations.paymentIntentId,
       createdAt: registrations.createdAt,
       player: {
         firstName: players.firstName,

@@ -85,11 +85,11 @@ function PaymentsPage() {
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span>{new Date(payment.createdAt).toLocaleDateString()}</span>
                 </div>
-                {payment.stripePaymentIntentId && (
+                {payment.paymentIntentId && (
                   <div className="flex items-center gap-2 text-sm">
                     <CreditCard className="h-4 w-4 text-muted-foreground" />
                     <span className="truncate text-muted-foreground">
-                      Payment ID: {payment.stripePaymentIntentId}
+                      Payment ID: {payment.paymentIntentId}
                     </span>
                   </div>
                 )}
