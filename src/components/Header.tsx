@@ -1,4 +1,4 @@
-import { Link, useRouterState } from '@tanstack/react-router';
+import { Link, useRouterState, useNavigate } from '@tanstack/react-router';
 import { Button } from '~/components/ui/button';
 import { Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -8,6 +8,7 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const router = useRouterState();
+  const navigate = useNavigate();
   const isHomePage = router.location.pathname === '/';
 
   useEffect(() => {
@@ -25,10 +26,29 @@ export function Header() {
     }
   };
 
+  const scrollToPrograms = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isHomePage) {
+      const element = document.getElementById('programs');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+      navigate({ to: '/' }).then(() => {
+        setTimeout(() => {
+          const element = document.getElementById('programs');
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 100);
+      });
+    }
+  };
+
   const navigation = [
     { name: 'Home', href: '/' },
     { name: 'About', href: '/about' },
-    { name: 'Programs', href: '/teams' },
+    { name: 'Programs', href: '/#programs', onClick: scrollToPrograms },
     { name: 'Schedule', href: '/schedule' },
     { name: 'Sponsors', href: '/sponsors' },
     { name: 'Contact', href: '/contact' },
@@ -54,6 +74,7 @@ export function Header() {
               <Link
                 key={item.name}
                 to={item.href}
+                onClick={item.onClick}
                 className="group relative px-4 py-2 text-base font-medium text-white/90 drop-shadow-md transition-colors duration-200 hover:text-sky-300"
               >
                 {item.name}
@@ -103,7 +124,10 @@ export function Header() {
               <Link
                 key={item.name}
                 to={item.href}
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={(e) => {
+                  setMobileMenuOpen(false);
+                  if (item.onClick) item.onClick(e);
+                }}
                 className="group relative block rounded-lg px-4 py-3 text-lg font-medium text-white/90 transition-colors duration-200 hover:bg-sky-500/20 hover:text-sky-300"
               >
                 {item.name}
