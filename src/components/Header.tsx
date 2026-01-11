@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router';
+import { Link, useRouterState } from '@tanstack/react-router';
 import { Button } from '~/components/ui/button';
 import { Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -7,6 +7,8 @@ import { ThemeToggle } from '~/components/ThemeToggle';
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const router = useRouterState();
+  const isHomePage = router.location.pathname === '/';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -15,6 +17,13 @@ export function Header() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    if (isHomePage) {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   const navigation = [
     { name: 'Home', href: '/' },
@@ -30,7 +39,7 @@ export function Header() {
       <div className="container mx-auto px-6">
         <div className="flex h-16 items-center justify-between md:h-20">
           {/* Logo */}
-          <Link to="/" className="group flex items-center gap-3 transition-opacity hover:opacity-80">
+          <Link to="/" onClick={handleLogoClick} className="group flex items-center gap-3 transition-opacity hover:opacity-80">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-900 transition-transform group-hover:scale-105 md:h-14 md:w-14">
               <span className="text-3xl md:text-4xl">⚽</span>
             </div>
