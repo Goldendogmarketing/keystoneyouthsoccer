@@ -48,7 +48,7 @@ export function SignInForm() {
         password: data.password,
       });
 
-      // Redirect to dashboard on success
+      // Redirect all users to unified dashboard (role-based features shown there)
       navigate({ to: '/dashboard' });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to sign in. Please try again.');

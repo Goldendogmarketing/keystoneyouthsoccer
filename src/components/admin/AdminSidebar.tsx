@@ -21,6 +21,7 @@ import {
   Layers,
   Moon,
   Sun,
+  Gamepad2,
 } from 'lucide-react';
 import { Button } from '~/components/ui/button';
 import { signOut } from '~/lib/auth/client';
@@ -41,6 +42,7 @@ const navigationSections = [
       { name: 'Registrations', href: '/admin/registrations', icon: FileText },
       { name: 'Players', href: '/admin/players', icon: Users },
       { name: 'Teams', href: '/admin/teams', icon: Shield },
+      { name: 'Games', href: '/admin/games', icon: Gamepad2 },
       { name: 'Leagues', href: '/admin/leagues', icon: Layers },
       { name: 'Seasons', href: '/admin/seasons', icon: Calendar },
     ],
