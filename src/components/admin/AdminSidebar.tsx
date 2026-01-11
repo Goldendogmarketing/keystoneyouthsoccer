@@ -19,9 +19,12 @@ import {
   Megaphone,
   MessageSquare,
   Layers,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { Button } from '~/components/ui/button';
 import { signOut } from '~/lib/auth/client';
+import { useTheme } from '~/components/theme-provider';
 
 const navigationSections = [
   {
@@ -64,11 +67,18 @@ const navigationSections = [
 export function AdminSidebar() {
   const router = useRouterState();
   const currentPath = router.location.pathname;
+  const { theme, setTheme } = useTheme();
 
   const handleSignOut = async () => {
     await signOut();
     window.location.href = '/';
   };
+
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
+
+  const isDark = theme === 'dark' || (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   return (
     <div className="flex h-full flex-col border-r border-border/40 bg-card/30 backdrop-blur-sm">
@@ -147,6 +157,15 @@ export function AdminSidebar() {
         <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Quick Actions
         </p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full justify-start hover-gold-bg"
+          onClick={toggleTheme}
+        >
+          {isDark ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
+          {isDark ? 'Light Mode' : 'Dark Mode'}
+        </Button>
         <Button asChild variant="outline" size="sm" className="w-full justify-start hover-gold-bg">
           <Link to="/">
             <ArrowLeft className="mr-2 h-4 w-4" />

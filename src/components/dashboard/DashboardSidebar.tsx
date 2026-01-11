@@ -1,8 +1,9 @@
 import { Link, useRouterState } from '@tanstack/react-router';
 import { cn } from '~/lib/utils';
-import { Home, Users, FileText, CreditCard, Calendar, User, LogOut, ArrowLeft, CheckSquare } from 'lucide-react';
+import { Home, Users, FileText, CreditCard, Calendar, User, LogOut, ArrowLeft, CheckSquare, Moon, Sun } from 'lucide-react';
 import { Button } from '~/components/ui/button';
 import { signOut } from '~/lib/auth/client';
+import { useTheme } from '~/components/theme-provider';
 
 const navigation = [
   { name: 'Overview', href: '/dashboard', icon: Home },
@@ -17,11 +18,18 @@ const navigation = [
 export function DashboardSidebar() {
   const router = useRouterState();
   const currentPath = router.location.pathname;
+  const { theme, setTheme } = useTheme();
 
   const handleSignOut = async () => {
     await signOut();
     window.location.href = '/';
   };
+
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
+
+  const isDark = theme === 'dark' || (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   return (
     <div className="flex h-full flex-col border-r border-border/40 bg-card/30 backdrop-blur-sm">
@@ -88,6 +96,15 @@ export function DashboardSidebar() {
         <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Quick Actions
         </p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full justify-start hover-gold-bg"
+          onClick={toggleTheme}
+        >
+          {isDark ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
+          {isDark ? 'Light Mode' : 'Dark Mode'}
+        </Button>
         <Button
           asChild
           variant="outline"

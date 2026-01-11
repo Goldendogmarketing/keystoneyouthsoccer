@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { Button } from '~/components/ui/button';
 import { Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { ThemeToggle } from '~/components/ThemeToggle';
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -65,6 +66,9 @@ export function Header() {
             >
               <Link to="/dashboard">Sign In</Link>
             </Button>
+
+            {/* Theme Toggle */}
+            <ThemeToggle />
 
             {/* Mobile Menu Toggle */}
             <button
