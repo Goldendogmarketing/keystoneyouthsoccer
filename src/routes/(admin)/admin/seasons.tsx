@@ -1,16 +1,49 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, ClientOnly } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { getAllSeasons } from '~/server/function/admin/get-all-seasons';
 import { Card, CardHeader, CardTitle, CardContent } from '~/components/ui/card';
 import { Button } from '~/components/ui/button';
 import { Badge } from '~/components/ui/badge';
-import { Plus, Calendar, DollarSign, Users, Edit } from 'lucide-react';
+import { Plus, Calendar, DollarSign, Users, Edit, Loader2 } from 'lucide-react';
 
 export const Route = createFileRoute('/(admin)/admin/seasons')({
   component: AdminSeasonsPage,
 });
 
+// Format date consistently to avoid hydration issues
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const year = date.getFullYear();
+  return `${month}/${day}/${year}`;
+}
+
 function AdminSeasonsPage() {
+  return (
+    <ClientOnly fallback={<SeasonsLoadingFallback />}>
+      <AdminSeasonsContent />
+    </ClientOnly>
+  );
+}
+
+function SeasonsLoadingFallback() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Seasons Management</h1>
+          <p className="text-muted-foreground">Manage soccer seasons and registration periods</p>
+        </div>
+      </div>
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    </div>
+  );
+}
+
+function AdminSeasonsContent() {
   const { data: seasons, isLoading } = useQuery({
     queryKey: ['admin-seasons'],
     queryFn: async () => await getAllSeasons(),
@@ -72,8 +105,8 @@ function AdminSeasonsPage() {
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Season:</span>
                     <span>
-                      {new Date(season.startDate).toLocaleDateString()} -{' '}
-                      {new Date(season.endDate).toLocaleDateString()}
+                      {formatDate(season.startDate)} -{' '}
+                      {formatDate(season.endDate)}
                     </span>
                   </div>
                   {season.registrationStartDate && season.registrationEndDate && (
@@ -81,8 +114,8 @@ function AdminSeasonsPage() {
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span className="text-muted-foreground">Registration:</span>
                       <span>
-                        {new Date(season.registrationStartDate).toLocaleDateString()} -{' '}
-                        {new Date(season.registrationEndDate).toLocaleDateString()}
+                        {formatDate(season.registrationStartDate)} -{' '}
+                        {formatDate(season.registrationEndDate)}
                       </span>
                     </div>
                   )}

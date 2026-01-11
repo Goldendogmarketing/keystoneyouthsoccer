@@ -1,5 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { useState } from 'react';
+import { createFileRoute, ClientOnly } from '@tanstack/react-router';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardContent } from '~/components/ui/card';
 import { Button } from '~/components/ui/button';
@@ -92,9 +92,38 @@ const EVENT_TYPES: { value: EventType; label: string }[] = [
 ];
 
 function AdminCalendar() {
+  return (
+    <ClientOnly fallback={<CalendarLoadingFallback />}>
+      <AdminCalendarContent />
+    </ClientOnly>
+  );
+}
+
+function CalendarLoadingFallback() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Calendar</h1>
+      </div>
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function AdminCalendarContent() {
   const queryClient = useQueryClient();
-  const today = new Date();
-  const [currentDate, setCurrentDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+  // Initialize dates only on client to avoid hydration mismatch
+  const [today] = useState(() => new Date());
+  const [currentDate, setCurrentDate] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [viewMode, setViewMode] = useState<'month' | 'list'>('month');
   const [showForm, setShowForm] = useState(false);
@@ -546,7 +575,7 @@ function AdminCalendar() {
           <CardHeader>
             <CardTitle>
               {selectedDate
-                ? selectedDate.toLocaleDateString('en-US', {
+                ? selectedDate.toLocaleDateString(undefined, {
                     weekday: 'long',
                     month: 'long',
                     day: 'numeric',

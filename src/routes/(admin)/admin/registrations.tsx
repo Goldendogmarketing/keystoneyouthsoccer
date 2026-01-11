@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, ClientOnly } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '~/components/ui/card';
@@ -45,6 +45,28 @@ import {
 export const Route = createFileRoute('/(admin)/admin/registrations')({
   component: AdminRegistrationsPage,
 });
+
+// Format date consistently to avoid hydration issues
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const year = date.getFullYear();
+  return `${month}/${day}/${year}`;
+}
+
+// Format datetime consistently to avoid hydration issues
+function formatDateTime(dateString: string): string {
+  const date = new Date(dateString);
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const year = date.getFullYear();
+  const hours = date.getHours();
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const hour12 = hours % 12 || 12;
+  return `${month}/${day}/${year}, ${hour12}:${minutes} ${ampm}`;
+}
 
 const AGE_GROUPS = ['U6', 'U8', 'U10', 'U12', 'U14', 'U16+'];
 const STATUSES = [
@@ -515,7 +537,7 @@ function AdminRegistrationsPage() {
                         {getStatusBadge(reg.registration.status, reg.registration.paymentStatus || 'pending')}
                       </td>
                       <td className="p-3 text-sm text-muted-foreground whitespace-nowrap">
-                        {new Date(reg.registration.createdAt).toLocaleDateString()}
+                        {formatDate(reg.registration.createdAt)}
                       </td>
                       <td className="p-3">
                         <div className="flex gap-1">
@@ -777,12 +799,12 @@ function RegistrationDetailView({
           </div>
           <div>
             <p className="text-muted-foreground">Registered</p>
-            <p className="font-medium">{new Date(registration.createdAt).toLocaleString()}</p>
+            <p className="font-medium">{formatDateTime(registration.createdAt)}</p>
           </div>
           {registration.paidAt && (
             <div>
               <p className="text-muted-foreground">Paid At</p>
-              <p className="font-medium">{new Date(registration.paidAt).toLocaleString()}</p>
+              <p className="font-medium">{formatDateTime(registration.paidAt)}</p>
             </div>
           )}
         </div>

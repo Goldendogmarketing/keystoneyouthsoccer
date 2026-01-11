@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, ClientOnly } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '~/components/ui/card';
@@ -27,10 +27,38 @@ export const Route = createFileRoute('/(admin)/admin/communications')({
   component: AdminCommunications,
 });
 
+// Format datetime consistently to avoid hydration issues
+function formatDateTime(dateString: string): string {
+  const date = new Date(dateString);
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const year = date.getFullYear();
+  const hours = date.getHours();
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const hour12 = hours % 12 || 12;
+  return `${month}/${day}/${year}, ${hour12}:${minutes} ${ampm}`;
+}
+
 type RecipientType = 'all' | 'team' | 'season' | 'individual';
 type MessageType = 'email' | 'sms';
 
 function AdminCommunications() {
+  return (
+    <ClientOnly fallback={
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold">Communications</h1>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    }>
+      <AdminCommunicationsContent />
+    </ClientOnly>
+  );
+}
+
+function AdminCommunicationsContent() {
   const queryClient = useQueryClient();
 
   const { data: templates = [], isLoading: templatesLoading } = useQuery(
@@ -436,7 +464,7 @@ function AdminCommunications() {
                         {msg.recipientCount} recipients)
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(msg.sentAt).toLocaleString()}
+                        {formatDateTime(msg.sentAt)}
                       </p>
                     </div>
                   </div>

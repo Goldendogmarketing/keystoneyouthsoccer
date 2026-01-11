@@ -1,10 +1,20 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link, ClientOnly } from '@tanstack/react-router';
 import { Button } from '~/components/ui/button';
 import { Card, CardHeader, CardContent, CardFooter } from '~/components/ui/card';
+import { Loader2 } from 'lucide-react';
 
 export const Route = createFileRoute('/register/')({
   component: RouteComponent,
 });
+
+// Format date consistently to avoid hydration issues
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const year = date.getFullYear();
+  return `${month}/${day}/${year}`;
+}
 
 // Mock season data - will be replaced with actual DB query in Phase 4
 const MOCK_SEASONS = [
@@ -44,14 +54,14 @@ function RouteComponent() {
                 <div>
                   <p className="text-sm font-medium">Season Dates</p>
                   <p className="text-sm text-muted-foreground">
-                    {new Date(season.startDate).toLocaleDateString()} -{' '}
-                    {new Date(season.endDate).toLocaleDateString()}
+                    {formatDate(season.startDate)} -{' '}
+                    {formatDate(season.endDate)}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium">Registration Closes</p>
                   <p className="text-sm text-muted-foreground">
-                    {new Date(season.registrationCloseDate).toLocaleDateString()}
+                    {formatDate(season.registrationCloseDate)}
                   </p>
                 </div>
                 <div>

@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, ClientOnly } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '~/components/ui/card';
@@ -32,6 +32,15 @@ export const Route = createFileRoute('/(admin)/admin/announcements')({
   component: AdminAnnouncements,
 });
 
+// Format date consistently to avoid hydration issues
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const year = date.getFullYear();
+  return `${month}/${day}/${year}`;
+}
+
 type AnnouncementType = 'info' | 'warning' | 'success' | 'urgent';
 
 interface FormData {
@@ -62,6 +71,21 @@ const typeConfig: Record<AnnouncementType, { icon: React.ElementType; color: str
 };
 
 function AdminAnnouncements() {
+  return (
+    <ClientOnly fallback={
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold">Announcements</h1>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    }>
+      <AdminAnnouncementsContent />
+    </ClientOnly>
+  );
+}
+
+function AdminAnnouncementsContent() {
   const queryClient = useQueryClient();
   const { data: announcements = [], isLoading } = useQuery(announcementsQueries.all());
 
@@ -351,10 +375,10 @@ function AdminAnnouncements() {
                         <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                           <span>Type: {config.label}</span>
                           {announcement.startDate && (
-                            <span>From: {new Date(announcement.startDate).toLocaleDateString()}</span>
+                            <span>From: {formatDate(announcement.startDate)}</span>
                           )}
                           {announcement.endDate && (
-                            <span>Until: {new Date(announcement.endDate).toLocaleDateString()}</span>
+                            <span>Until: {formatDate(announcement.endDate)}</span>
                           )}
                         </div>
                       </div>
