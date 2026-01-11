@@ -58,6 +58,33 @@ export const getSeasonForRegistration = createServerFn({ method: 'GET' })
     };
   });
 
+// Get all seasons (for admin)
+export const getSeasons = createServerFn({ method: 'GET' }).handler(async () => {
+  const allSeasons = await db
+    .select()
+    .from(seasons)
+    .orderBy(seasons.startDate);
+
+  return {
+    seasons: allSeasons.map(season => ({
+      id: season.id,
+      name: season.name,
+      seasonType: season.seasonType,
+      year: season.year,
+      startDate: season.startDate,
+      endDate: season.endDate,
+      registrationOpenDate: season.registrationOpenDate,
+      registrationCloseDate: season.registrationCloseDate,
+      isActive: season.isActive,
+      isRegistrationOpen: season.isRegistrationOpen,
+      registrationFee: parseFloat(season.registrationFee),
+      lateFee: parseFloat(season.lateFee || '0'),
+      description: season.description,
+      ageGroups: season.ageGroups ? JSON.parse(season.ageGroups) : [],
+    })),
+  };
+});
+
 // Public function - get all active seasons for registration
 export const getActiveSeasons = createServerFn({ method: 'GET' }).handler(async () => {
   const today = new Date().toISOString().split('T')[0];
